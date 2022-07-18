@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Portfolio
+{% endblock %}
+
+{% block main %}
+    <h2>
+        My Recipes
+    </h2>
+    <br><br>
+    <table>
+        <thead>
+            <tr style="border-bottom: 2px solid black;">
+                <th>Action</th>
+                <th>Recipe</th>
+                <th>Calories</th>
+            </tr>
+        </thead>
+        {% for recipe in recipes %}
+            <tr>
+                <td>
+                    <a class="btn btn-warning" href="/recipe?id={{ recipe['recipe_id'] }}">View</a>
+                    <a class="btn btn-success" href="/delete?id={{ recipe['recipe_id'] }}">Delete</a>
+                </td>
+                <td>{{ recipe['name'] }}</td>
+                <td>{{ recipe['calories'] }}</td>
+            </tr>
+        {% endfor %}
+
+    </table>
+{% endblock %}

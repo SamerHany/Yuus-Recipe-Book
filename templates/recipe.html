@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Recipe
+{% endblock %}
+
+{% block script %}
+    <script>
+
+        // calculates totals when the page loads
+        window.onload = function () {
+            updateTotals();
+        }
+
+
+        // adds a new ingredient to the table
+        function addIngredient() {
+            // get selected parameters
+            var id = document.getElementById('ingredient').value;
+            var qty = document.getElementById('qty').value;
+
+            // get ingredient details
+            $.ajax({
+                crossDomain: true,
+                url: `/ingredient?id=${id}`,
+                type: 'GET',
+                success: function(resp){
+                    console.log(resp);
+
+                    // row
+                    var node = document.createElement('tr');
+                    node.classList.add('ingredient-row');
+                    node.id = id;
+
+                    // col 1
+                    var col1 = document.createElement('td');
+                    col1.innerHTML = `<a class="btn btn-danger" href="#" onclick="removeRow(this)"><i class="fa fa-trash"></i></a>`;
+                    node.appendChild(col1);
+
+                    // col 2
+                    var col2 = document.createElement('td');
+                    col2.innerHTML = resp['name'];
+                    node.appendChild(col2);
+
+                    // col 3
+                    var col3 = document.createElement('td');
+                    col3.innerHTML = qty;
+                    node.appendChild(col3);
+
+                    // col 4
+                    var col4 = document.createElement('td');
+                    col4.innerHTML = (qty * resp['calories']).toFixed(0);
+                    node.appendChild(col4);
+
+                    // add to ingredients table
+                    document.getElementById('tbl_ingredients').appendChild(node);
+
+                    // update totals
+                    updateTotals();
+
+                    // reset form
+                    document.getElementById('frm_ingredient').reset();
+                }
+            });
+
+        }
+
+
+        // updates the totals row
+        function updateTotals() {
+            // initialize totals
+            var grams = 0;
+            var calories = 0;
+
+            // get all ingredient rows
+            var ingredients = document.querySelectorAll('.ingredient-row');
+            for (let ingredient of ingredients) {
+                grams += Number(ingredient.children[2].innerHTML);
+                calories += Number(ingredient.children[3].innerHTML);
+            }
+
+            // update total row
+            document.getElementById('total_grams').innerHTML = grams;
+            document.getElementById('total_calories').innerHTML = calories;
+        }
+
+
+        // removes the ingredient row and recalculates totals
+        function removeRow(elem) {
+            var parentRow = elem.parentElement.parentElement.remove();
+            updateTotals();
+        }
+
+
+        // saves the recipe to database
+        function saveRecipe() {
+            // get form element
+            var form = document.forms[0];
+
+            // add ingredients
+            var ingredients = document.querySelectorAll('.ingredient-row');
+            if (ingredients.length == 0) {
+                alert('Recipe must have at least 1 ingredient!');
+                return false;
+            }
+
+            for (let i=0; i < ingredients.length; i++) {
+                let nodeId = document.createElement('input');
+                nodeId.name = `ingredient_id_${i + 1}`;
+                nodeId.value = ingredients[i].id;
+                nodeId.setAttribute('type', 'hidden');
+                form.appendChild(nodeId);
+
+                let nodeQty = document.createElement('input');
+                nodeQty.name = `ingredient_qty_${i + 1}`;
+                nodeQty.value = ingredients[i].children[2].innerHTML;
+                nodeQty.setAttribute('type', 'hidden');
+                form.appendChild(nodeQty);
+            }
+
+            // add totals
+            let nodeCount = document.createElement('input');
+            nodeCount.name = 'ingredients_count';
+            nodeCount.value = ingredients.length;
+            nodeCount.setAttribute('type', 'hidden');
+            form.appendChild(nodeCount);
+
+            let nodeCal = document.createElement('input');
+            nodeCal.name = 'calories';
+            nodeCal.value = document.getElementById('total_calories').innerHTML;
+            nodeCal.setAttribute('type', 'hidden');
+            form.appendChild(nodeCal);
+
+            // submit form
+            form.submit();
+        }
+
+    </script>
+{% endblock %}
+
+{% block main %}
+    <h3>
+        <form method="POST" action="/recipe" onsubmit="event.preventDefault(); saveRecipe();">
+            Recipe:
+            <input type="hidden" id="recipe_id" name="recipe_id" value="{{ recipe['recipe_id'] }}">
+            <input id="recipe_name" name="recipe_name" value="{{ recipe['name'] }}" autocomplete="off">
+            <button class="btn btn-primary" style="vertical-align: top;">Save</button>
+        </form>
+    </h3>
+    <br><br>
+
+    <div id="form_container">
+        <form id="frm_ingredient" onsubmit="event.preventDefault(); addIngredient();">
+            <select id="ingredient" required>
+                <option value="" disabled selected>Select Ingredient</option>
+                {% for ingredient in ingredients %}
+                    <option value="{{ ingredient['id'] }}">{{ ingredient['name'] }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" min="0" id="qty" placeholder="Quantity (gram)" required>
+            <input type="submit" class="btn btn-success" value="Add">
+        </form>
+    </div>
+    <br><br>
+
+    <table id="tbl_ingredients">
+        <thead>
+            <tr style="border-bottom: 2px solid black;">
+                <th>Action</th>
+                <th>Ingredient</th>
+                <th>Quantity (gram)</th>
+                <th>Calories</th>
+            </tr>
+        </thead>
+        {% for ingredient in recipe['ingredients'] %}
+            <tr class="ingredient-row" id="{{ ingredient['id'] }}">
+                <td>
+                    <a class="btn btn-danger" href="#" onclick="removeRow(this)"><i class="fa fa-trash"></i></a>
+                </td>
+                <td>{{ ingredient['name'] }}</td>
+                <td>{{ ingredient['qty'] }}</td>
+                <td>{{ ingredient['calories'] }}</td>
+            </tr>
+        {% endfor %}
+
+    </table>
+
+    <!-- TOTAL TABLE-->
+    <table>
+        <tr id="row_total">
+            <td></td>
+            <td>TOTAL</td>
+            <td id="total_grams"></td>
+            <td id="total_calories"></td>
+        </tr>
+    </table>
+    <br><br><br>
+{% endblock %}
